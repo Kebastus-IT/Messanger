@@ -31,7 +31,6 @@ fun main() = runBlocking {
 
         send(Frame.Text(WsJson.encodeToString<ClientEvent>(Join("room-general"))))
 
-        // 3) консольный ввод → SendMessage
         while (true) {
             val line = scanner.nextLine()
             if (line == "/exit") break
