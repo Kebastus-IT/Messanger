@@ -12,6 +12,20 @@ data class Connected(
 ) : ServerEvent()
 
 @Serializable
+@SerialName("joined_chat")
+data class JoinedChat(
+    val chatId: String
+) : ServerEvent()
+
+@Serializable
+@SerialName("recent_messages")
+data class RecentMessages(
+    val chatId: String,
+    val items: List<ChatMessage>
+) : ServerEvent()
+
+
+@Serializable
 @SerialName("chat_message")
 data class ChatMessage(
     val chatId: String,

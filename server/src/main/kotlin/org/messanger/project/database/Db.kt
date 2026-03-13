@@ -1,4 +1,4 @@
-package org.messanger.project.DataBase
+package org.messanger.project.database
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource

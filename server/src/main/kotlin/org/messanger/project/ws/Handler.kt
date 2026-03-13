@@ -2,15 +2,14 @@ package org.messanger.project.ws
 
 import io.ktor.server.websocket.*
 import io.ktor.websocket.Frame
+import org.messanger.project.database.ChatMembersTable
+import org.messanger.project.database.ChatRepository
 import org.messanger.project.protocol.*
 import java.util.concurrent.ConcurrentHashMap
 
 private val online = ConcurrentHashMap<String, DefaultWebSocketServerSession>()
 
-private val chatMembers = mapOf(
-    "room-general" to setOf("u1", "u2"),
-    "dm-u1-u2" to setOf("u1", "u2")
-)
+
 suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
     online[userId] = this
     sendEvent(Connected(userId))
@@ -25,22 +24,44 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                 }
             when(event) {
              is Join -> {
-                 val members = chatMembers[event.chatId]
-                 if (members == null || userId !in members) {
+                     val allowed = ChatRepository.isMember(event.chatId,userId)
+                 if (!allowed) {
                      sendEvent(ErrorEvent("IMPOSTER", "You are not a member of ${event.chatId}"))
                      continue
                  }
-                     sendEvent(ChatMessage(event.chatId, "server", "joined ${event.chatId}"))
+                 sendEvent(JoinedChat(event.chatId))
 
+                 val recentMessages = ChatRepository
+                     .getRecentMessages(event.chatId, limit = 50)
+                     .map {
+                         ChatMessage(
+                             chatId = it.chatId,
+                             fromUserId = it.senderUserId,
+                             text = it.text,
+                             serverMsgId = it.id
+                         )
+                     }
+
+                 sendEvent(
+                     RecentMessages(
+                         chatId = event.chatId,
+                         items = recentMessages
+                     )
+                 )
              }
                 is SendMessage -> {
-                    val members = chatMembers[event.chatId] ?: emptySet()
-                    if (userId !in members) {
-                        sendEvent(ErrorEvent("IMPOSTER", "You are not a member of ${event.chatId}"))
-                        continue
-                    }
-                    for (m in members) {
-                        online[m]?.sendEvent(ChatMessage(event.chatId, userId, event.text))
+                    val messageId = ChatRepository.saveMessage(event.chatId, userId, event.text)
+                    val memberIds = ChatRepository.getChatMemberIds(event.chatId)
+
+                    for (memberId in memberIds) {
+                        online[memberId]?.sendEvent(
+                            ChatMessage(
+                                chatId = event.chatId,
+                                fromUserId = userId,
+                                text = event.text,
+                                serverMsgId = messageId
+                            )
+                        )
                     }
                 }
 
