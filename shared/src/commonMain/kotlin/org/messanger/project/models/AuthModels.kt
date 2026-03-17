@@ -1,4 +1,4 @@
-package org.messanger.project.auth
+package org.messanger.project.models
 
 
 import kotlinx.serialization.Serializable

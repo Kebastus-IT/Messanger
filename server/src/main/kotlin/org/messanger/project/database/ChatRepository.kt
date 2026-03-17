@@ -9,6 +9,8 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
+import org.messanger.project.models.ChatSummary
+import java.time.LocalDateTime
 
 object ChatMembersTable : Table("chat_members") {
     val chatId = varchar("chat_id", 64)
@@ -27,11 +29,20 @@ object MessagesTable : Table("messages") {
     override val primaryKey = PrimaryKey(id)
 }
 
+object ChatsTable : Table("chats") {
+    val id = varchar("id", 64)
+    val title = varchar("title", 255)
+    val type = varchar("type", 32)
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 data class StoredMessage(
     val id: Long,
     val chatId: String,
     val senderUserId: String,
-    val text: String
+    val text: String,
+    val createdAt: LocalDateTime
 )
 
 private fun ResultRow.toStoredMessage(): StoredMessage {
@@ -39,7 +50,8 @@ private fun ResultRow.toStoredMessage(): StoredMessage {
         id = this[MessagesTable.id],
         chatId = this[MessagesTable.chatId],
         senderUserId = this[MessagesTable.senderUserId],
-        text = this[MessagesTable.text]
+        text = this[MessagesTable.text],
+        createdAt =  this[MessagesTable.createdAt]
     )
 }
 object ChatRepository {
@@ -73,6 +85,24 @@ object ChatRepository {
                 .select(ChatMembersTable.userId)
                 .where { ChatMembersTable.chatId eq chatId }
                 .map { it[ChatMembersTable.userId] }
+        }
+    }
+    fun getUserChats(userId: String): List<ChatSummary> {
+        return transaction {
+            ChatMembersTable.join(
+                otherTable = ChatsTable,
+                joinType = org.jetbrains.exposed.sql.JoinType.INNER,
+                onColumn = ChatMembersTable.chatId,
+                otherColumn = ChatsTable.id
+            )
+                .select(ChatsTable.id, ChatsTable.title)
+                .where { ChatMembersTable.userId eq userId }
+                .map {
+                    ChatSummary(
+                        id = it[ChatsTable.id],
+                        title = it[ChatsTable.title]
+                    )
+                }
         }
     }
     fun getRecentMessages(chatId: String, limit: Int): List<StoredMessage> {

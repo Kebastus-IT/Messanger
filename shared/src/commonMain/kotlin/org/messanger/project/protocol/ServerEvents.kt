@@ -31,7 +31,8 @@ data class ChatMessage(
     val chatId: String,
     val fromUserId: String,
     val text: String,
-    val serverMsgId: Long? = null
+    val serverMsgId: Long? = null,
+    val createdAt: String? = null
 ) : ServerEvent()
 
 @Serializable

@@ -6,6 +6,10 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
 import org.messanger.project.database.AuthRepository
+import org.messanger.project.models.AuthResponse
+import org.messanger.project.models.ErrorResponse
+import org.messanger.project.models.LoginRequest
+import org.messanger.project.models.RegisterRequest
 import java.util.UUID
 
 fun Route.authRoutes(jwtService: JwtService) {

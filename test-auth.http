@@ -1,0 +1,18 @@
+### Register
+POST http://127.0.0.1:8080/register
+Content-Type: application/json
+
+{
+  "login": "leonid_test",
+  "displayName": "Leonid",
+  "password": "123456"
+}
+
+### Login
+POST http://127.0.0.1:8080/login
+Content-Type: application/json
+
+{
+  "login": "leonid_test",
+  "password": "123456"
+}
