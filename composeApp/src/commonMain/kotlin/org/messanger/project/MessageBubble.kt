@@ -10,28 +10,38 @@ import androidx.compose.ui.unit.dp
 fun MessageBubble(
     message: UiChatMessage
 ) {
-    Card(
+    Row(
         modifier = Modifier.fillMaxWidth()
+        .padding(horizontal = 8.dp),
+        horizontalArrangement = if (message.isMine) {
+            Arrangement.End
+        } else {
+            Arrangement.Start
+        }
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Card(
+            modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            Text(
-                text = if (message.isMine) "You" else message.fromUserId,
-                style = MaterialTheme.typography.labelMedium
-            )
-
-            Text(
-                text = message.text,
-                style = MaterialTheme.typography.bodyLarge
-            )
-
-            if (message.createdAt != null) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    text = message.createdAt,
-                    style = MaterialTheme.typography.bodySmall
+                    text = if (message.isMine) "You" else message.senderDisplayName,
+                    style = MaterialTheme.typography.labelMedium
                 )
+
+                Text(
+                    text = message.text,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+
+                if (message.createdAt != null) {
+                    Text(
+                        text = message.createdAt,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }

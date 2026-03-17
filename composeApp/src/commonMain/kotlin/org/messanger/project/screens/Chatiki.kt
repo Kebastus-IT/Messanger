@@ -9,7 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.messanger.project.ChatsApi
+import org.messanger.project.connection.ChatsApi
 import org.messanger.project.models.ChatSummary
 
 

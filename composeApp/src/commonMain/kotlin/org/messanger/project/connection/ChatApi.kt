@@ -1,4 +1,4 @@
-package org.messanger.project
+package org.messanger.project.connection
 
 import io.ktor.client.*
 import io.ktor.client.call.*

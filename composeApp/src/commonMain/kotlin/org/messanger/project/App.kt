@@ -2,6 +2,7 @@ package org.messanger.project
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
+import com.russhwolf.settings.Settings
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
@@ -11,6 +12,10 @@ import org.messanger.project.screens.ChatsScreen
 import org.messanger.project.protocol.WsJson
 import org.messanger.project.models.ChatSummary
 import io.ktor.client.plugins.websocket.*
+import org.messanger.project.connection.AuthApi
+import org.messanger.project.connection.ChatConnection
+import org.messanger.project.connection.ChatsApi
+import org.messanger.project.platform.BASE_URL
 
 @Composable
 @Preview
@@ -24,7 +29,7 @@ fun App() {
         }
     }
 
-    val baseUrl = "http://localhost:8080"
+    val baseUrl = BASE_URL
 
     val authApi = remember {
         AuthApi(
@@ -46,8 +51,17 @@ fun App() {
             baseUrl = baseUrl
         )
     }
+    val settings = remember {
+        Settings()
+    }
 
-    var session by remember { mutableStateOf<UserSession?>(null) }
+    val sessionStorage = remember {
+        SessionStorage(settings)
+    }
+
+    var session by remember {
+        mutableStateOf(sessionStorage.loadSession())
+    }
     var selectedChat by remember { mutableStateOf<ChatSummary?>(null) }
 
     when {
@@ -55,6 +69,7 @@ fun App() {
             AuthScreen(
                 authApi = authApi,
                 onAuthSuccess = { newSession ->
+                    sessionStorage.saveSession(newSession)
                     session = newSession
                 }
             )
@@ -68,6 +83,7 @@ fun App() {
                     selectedChat = chat
                 },
                 onLogout = {
+                    sessionStorage.clearSession()
                     session = null
                     selectedChat = null
                 }

@@ -2,7 +2,6 @@ package org.messanger.project.ws
 
 import io.ktor.server.websocket.*
 import io.ktor.websocket.Frame
-import org.messanger.project.database.ChatMembersTable
 import org.messanger.project.database.ChatRepository
 import org.messanger.project.protocol.*
 import java.util.concurrent.ConcurrentHashMap
@@ -36,7 +35,8 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                      .map {
                          ChatMessage(
                              chatId = it.chatId,
-                             fromUserId = it.senderUserId,
+                             senderUserId = it.senderUserId,
+                             senderDisplayName = it.senderDisplayName,
                              text = it.text,
                              serverMsgId = it.id
                          )
@@ -52,12 +52,14 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                 is SendMessage -> {
                     val messageId = ChatRepository.saveMessage(event.chatId, userId, event.text)
                     val memberIds = ChatRepository.getChatMemberIds(event.chatId)
+                    val senderDisplayName = ChatRepository.getUserDisplayName(userId) ?: userId
 
                     for (memberId in memberIds) {
                         online[memberId]?.sendEvent(
                             ChatMessage(
                                 chatId = event.chatId,
-                                fromUserId = userId,
+                                senderUserId = userId,
+                                senderDisplayName = senderDisplayName,
                                 text = event.text,
                                 serverMsgId = messageId
                             )

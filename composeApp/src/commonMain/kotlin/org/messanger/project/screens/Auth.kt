@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.messanger.project.AuthApi
+import org.messanger.project.connection.AuthApi
 import org.messanger.project.UserSession
 
 @Composable

@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.messanger.project.ChatConnection
+import org.messanger.project.connection.ChatConnection
 import org.messanger.project.MessageBubble
 import org.messanger.project.UiChatMessage
 import org.messanger.project.UserSession
@@ -48,9 +48,10 @@ fun ChatScreen(
                             event.items.map { item ->
                                 UiChatMessage(
                                     serverMsgId = item.serverMsgId,
-                                    fromUserId = item.fromUserId,
+                                    senderUserId = item.senderUserId,
+                                    senderDisplayName = item.senderDisplayName,
                                     text = item.text,
-                                    isMine = item.fromUserId == session.userId,
+                                    isMine = item.senderUserId == session.userId,
                                     createdAt = item.createdAt
                                 )
                             }
@@ -61,9 +62,10 @@ fun ChatScreen(
                         messages.add(
                             UiChatMessage(
                                 serverMsgId = event.serverMsgId,
-                                fromUserId = event.fromUserId,
+                                senderUserId = event.senderUserId,
+                                senderDisplayName = event.senderDisplayName,
                                 text = event.text,
-                                isMine = event.fromUserId == session.userId,
+                                isMine = event.senderUserId == session.userId,
                                 createdAt = event.createdAt
                             )
                         )

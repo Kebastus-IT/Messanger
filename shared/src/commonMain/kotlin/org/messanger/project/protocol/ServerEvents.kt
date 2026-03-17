@@ -29,7 +29,8 @@ data class RecentMessages(
 @SerialName("chat_message")
 data class ChatMessage(
     val chatId: String,
-    val fromUserId: String,
+    val senderUserId: String,
+    val senderDisplayName: String,
     val text: String,
     val serverMsgId: Long? = null,
     val createdAt: String? = null

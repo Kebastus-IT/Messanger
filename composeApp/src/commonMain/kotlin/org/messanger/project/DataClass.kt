@@ -9,7 +9,8 @@ data class UserSession(
 
 data class UiChatMessage(
     val serverMsgId: Long?,
-    val fromUserId: String,
+    val senderUserId: String,
+    val senderDisplayName: String,
     val text: String,
     val createdAt: String?,
     val isMine: Boolean

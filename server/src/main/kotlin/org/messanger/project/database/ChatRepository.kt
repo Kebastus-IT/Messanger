@@ -20,13 +20,13 @@ object ChatMembersTable : Table("chat_members") {
 }
 
 object MessagesTable : Table("messages") {
-    val id = long("id").autoIncrement()
+    val msgId = long("id").autoIncrement()
     val chatId = varchar("chat_id", 64)
     val senderUserId = varchar("sender_user_id", 64)
     val text = text("text")
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
 
-    override val primaryKey = PrimaryKey(id)
+    override val primaryKey = PrimaryKey(msgId)
 }
 
 object ChatsTable : Table("chats") {
@@ -41,15 +41,17 @@ data class StoredMessage(
     val id: Long,
     val chatId: String,
     val senderUserId: String,
+    val senderDisplayName: String,
     val text: String,
     val createdAt: LocalDateTime
 )
 
 private fun ResultRow.toStoredMessage(): StoredMessage {
     return StoredMessage(
-        id = this[MessagesTable.id],
+        id = this[MessagesTable.msgId],
         chatId = this[MessagesTable.chatId],
         senderUserId = this[MessagesTable.senderUserId],
+        senderDisplayName = this[MessagesTable.text],
         text = this[MessagesTable.text],
         createdAt =  this[MessagesTable.createdAt]
     )
@@ -75,7 +77,7 @@ object ChatRepository {
                 it[MessagesTable.text] = text
             }
 
-            inserted[MessagesTable.id]
+            inserted[MessagesTable.msgId]
         }
     }
 
@@ -87,6 +89,7 @@ object ChatRepository {
                 .map { it[ChatMembersTable.userId] }
         }
     }
+
     fun getUserChats(userId: String): List<ChatSummary> {
         return transaction {
             ChatMembersTable.join(
@@ -105,14 +108,37 @@ object ChatRepository {
                 }
         }
     }
+    fun getUserDisplayName(userId: String): String? {
+        return transaction {
+            UsersTable
+                .select(UsersTable.displayName)
+                .where { UsersTable.id eq userId }
+                .map { it[UsersTable.displayName] }
+                .singleOrNull()
+        }
+    }
     fun getRecentMessages(chatId: String, limit: Int): List<StoredMessage> {
         return transaction {
-            MessagesTable
+            MessagesTable.join(
+                otherTable = UsersTable,
+                joinType = org.jetbrains.exposed.sql.JoinType.INNER,
+                onColumn = MessagesTable.senderUserId,
+                otherColumn = UsersTable.id
+            )
                 .selectAll()
                 .where { MessagesTable.chatId eq chatId }
-                .orderBy(MessagesTable.id, SortOrder.DESC)
+                .orderBy(MessagesTable.msgId, SortOrder.DESC)
                 .limit(limit)
-                .map { it.toStoredMessage() }
+                .map {
+                    StoredMessage(
+                        id = it[MessagesTable.msgId],
+                        chatId = it[MessagesTable.chatId],
+                        senderUserId = it[MessagesTable.senderUserId],
+                        senderDisplayName = it[UsersTable.displayName],
+                        text = it[MessagesTable.text],
+                        createdAt = it[MessagesTable.createdAt]
+                    )
+                }
                 .reversed()
         }
     }
