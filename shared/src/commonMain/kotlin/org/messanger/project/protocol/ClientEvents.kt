@@ -17,3 +17,4 @@ data class SendMessage(
     val chatId: String,
     val text: String
 ) : ClientEvent()
+

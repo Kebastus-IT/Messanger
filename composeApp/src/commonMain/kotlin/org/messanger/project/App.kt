@@ -15,6 +15,8 @@ import io.ktor.client.plugins.websocket.*
 import org.messanger.project.connection.AuthApi
 import org.messanger.project.connection.ChatConnection
 import org.messanger.project.connection.ChatsApi
+import org.messanger.project.connection.CreateChatApi
+import org.messanger.project.connection.FindUserApi
 import org.messanger.project.platform.BASE_URL
 
 @Composable
@@ -42,6 +44,19 @@ fun App() {
         ChatsApi(
             client = httpClient,
             baseUrl = baseUrl
+        )
+    }
+
+    val findUserApi = remember {
+        FindUserApi(
+            client = httpClient,
+            baseUrl =baseUrl
+        )
+    }
+    val createChatApi = remember {
+        CreateChatApi(
+            client = httpClient,
+            baseUrl =baseUrl
         )
     }
 
@@ -79,6 +94,8 @@ fun App() {
             ChatsScreen(
                 token = session!!.token,
                 chatsApi = chatsApi,
+                findUserApi = findUserApi,
+                createChatApi = createChatApi,
                 onChatSelected = { chat ->
                     selectedChat = chat
                 },

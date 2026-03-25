@@ -102,13 +102,13 @@ fun ChatScreen(
         ) {
             Column {
                 Text(
-                    text = chat.title,
+                    text = chat.displayTitle,
                     style = MaterialTheme.typography.headlineSmall
                 )
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodySmall
-                )
+//                    Text(
+//                    text = statusText,
+//                    style = MaterialTheme.typography.bodySmall
+//                )
             }
 
             TextButton(onClick = onBack) {

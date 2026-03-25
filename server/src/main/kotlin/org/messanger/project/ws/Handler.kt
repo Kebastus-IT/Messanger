@@ -11,6 +11,7 @@ private val online = ConcurrentHashMap<String, DefaultWebSocketServerSession>()
 
 suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
     online[userId] = this
+    val countOnline = online.size
     sendEvent(Connected(userId))
 
     try {
