@@ -53,11 +53,7 @@ fun Application.routingModule() {
     routing {
         authRoutes(jwtService)
 
-        val echoHandler = EchoHandler()
 
-        webSocket("/echo") {
-            echoHandler.handleEcho(this)
-        }
         authenticate("auth-jwt") {
             get("/users/find") {
                 val currentUserId = call.extractUserId()

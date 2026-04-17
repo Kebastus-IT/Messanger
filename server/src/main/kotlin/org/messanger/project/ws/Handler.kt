@@ -51,6 +51,11 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                  )
              }
                 is SendMessage -> {
+                    val allowed = ChatRepository.isMember(event.chatId,userId)
+                    if (!allowed) {
+                        sendEvent(ErrorEvent("IMPOSTER", "You are not a member of ${event.chatId}"))
+                        continue
+                    }
                     val messageId = ChatRepository.saveMessage(event.chatId, userId, event.text)
                     val memberIds = ChatRepository.getChatMemberIds(event.chatId)
                     val senderDisplayName = ChatRepository.getUserDisplayName(userId) ?: userId
