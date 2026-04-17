@@ -105,10 +105,6 @@ fun ChatScreen(
                     text = chat.displayTitle,
                     style = MaterialTheme.typography.headlineSmall
                 )
-//                    Text(
-//                    text = statusText,
-//                    style = MaterialTheme.typography.bodySmall
-//                )
             }
 
             TextButton(onClick = onBack) {

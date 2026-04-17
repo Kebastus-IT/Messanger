@@ -65,7 +65,11 @@ fun Application.routingModule() {
                     )
                     return@get
                 }
-                val query = call.request.queryParameters["login"].orEmpty()
+                val query = call.request.queryParameters["login"].orEmpty().trim()
+                if (query.length !in 1..32){
+                    call.respond(HttpStatusCode.BadRequest, "Query must be 1-32 chars")
+                    return@get
+                }
                 val users = ChatRepository.findUser(
                     query = query,
                     ownId = currentUserId

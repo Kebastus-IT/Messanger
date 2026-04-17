@@ -10,6 +10,6 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    Db.init()
+    Db.init(environment.config)
     routingModule()
 }

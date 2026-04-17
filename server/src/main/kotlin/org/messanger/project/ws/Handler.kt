@@ -26,7 +26,7 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
              is Join -> {
                      val allowed = ChatRepository.isMember(event.chatId,userId)
                  if (!allowed) {
-                     sendEvent(ErrorEvent("IMPOSTER", "You are not a member of ${event.chatId}"))
+                     sendEvent(ErrorEvent("NOT_A_MEMBER", "You are not a member of ${event.chatId}"))
                      continue
                  }
                  sendEvent(JoinedChat(event.chatId))
@@ -51,12 +51,24 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                  )
              }
                 is SendMessage -> {
-                    val allowed = ChatRepository.isMember(event.chatId,userId)
-                    if (!allowed) {
-                        sendEvent(ErrorEvent("IMPOSTER", "You are not a member of ${event.chatId}"))
+                    val text = event.text.trim()
+                    if (text.isEmpty()) {
+                        sendEvent(ErrorEvent("EMPTY_MESSAGE", "Message cannot be empty"))
                         continue
                     }
-                    val messageId = ChatRepository.saveMessage(event.chatId, userId, event.text)
+                    if(text.length > 4000) {
+                        sendEvent(ErrorEvent("MESSAGE_TOO_LONG", "Message must be 4000 characters or less"))
+                        continue
+                    }
+                    val allowed = ChatRepository.isMember(event.chatId,userId)
+                    if (!allowed) {
+                        sendEvent(ErrorEvent("NOT_A_MEMBER", "You are not a member of ${event.chatId}"))
+                        continue
+                    }
+
+
+
+                    val messageId = ChatRepository.saveMessage(event.chatId, userId, text)
                     val memberIds = ChatRepository.getChatMemberIds(event.chatId)
                     val senderDisplayName = ChatRepository.getUserDisplayName(userId) ?: userId
 
@@ -66,7 +78,7 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                                 chatId = event.chatId,
                                 senderUserId = userId,
                                 senderDisplayName = senderDisplayName,
-                                text = event.text,
+                                text = text,
                                 serverMsgId = messageId
                             )
                         )

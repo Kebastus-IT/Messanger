@@ -233,15 +233,6 @@ object ChatRepository {
                 .singleOrNull()
         }
     }
-//    fun getDmOtherUserId(chatId: String, currentUserId: String): String? {
-//        return transaction {
-//            ChatMembersTable
-//                .select(ChatMembersTable.userId)
-//                .where { ChatMembersTable.chatId eq chatId }
-//                .map { it[ChatMembersTable.userId] }
-//                .firstOrNull { it != currentUserId }
-//        }
-//    }
     fun getUserDisplayName(userId: String): String? {
         return transaction {
             UsersTable

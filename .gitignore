@@ -9,6 +9,8 @@ local.properties
 .DS_Store
 captures
 .externalNativeBuild
+.env
+.env.local
 .cxx
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj

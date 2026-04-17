@@ -16,24 +16,53 @@ fun Route.authRoutes(jwtService: JwtService) {
 
     post("/register") {
         val request = call.receive<RegisterRequest>()
+        val login = request.login.trim()
+        val displayName = request.displayName.trim()
+        val password = request.password
 
-        if (AuthRepository.existsByLogin(request.login)) {
+        if (login.length !in 3..32 || !login.matches(Regex("[a-zA-Z0-9_]+$"))){
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    code = "INVALID_LOGIN",
+                    message = "Login must be 3-32 characters, letters/digits/underscore only"
+            ))
+            return@post
+        }
+        if (displayName.length !in 1..64){
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    code = "INVALID_DISPLAY_NAME",
+                    message = "Name must be between 1-64 characters"
+            ))
+            return@post
+        }
+        if (password.length !in 8..128){
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    code = "INVALID_PASSWORD",
+                    message = "Password must be between 8-128 characters"
+            ))
+            return@post
+        }
+        if (AuthRepository.existsByLogin(login)) {
             call.respond(
                 HttpStatusCode.Conflict,
                 ErrorResponse(
                     code = "LOGIN_TAKEN",
                     message = "Login is already taken"
-                )
-            )
+            ))
             return@post
         }
 
-        val passwordHash = PasswordHasher.hash(request.password)
+        val passwordHash = PasswordHasher.hash(password)
 
         val user = AuthRepository.createUser(
             id = UUID.randomUUID().toString(),
-            login = request.login,
-            displayName = request.displayName,
+            login = login,
+            displayName = displayName,
             passwordHash = passwordHash
         )
 
@@ -52,7 +81,14 @@ fun Route.authRoutes(jwtService: JwtService) {
 
     post("/login") {
         val request = call.receive<LoginRequest>()
-
+        if (request.login.isBlank() || request.password.isBlank()){
+            call.respond(HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    code = "INVALID_CREDENTIALS",
+                    message = "Login and password required"
+                ))
+            return@post
+        }
         val user = AuthRepository.findByLogin(request.login)
         if (user == null) {
             call.respond(
@@ -60,8 +96,7 @@ fun Route.authRoutes(jwtService: JwtService) {
                 ErrorResponse(
                     code = "INVALID_CREDENTIALS",
                     message = "Invalid login or password"
-                )
-            )
+                ))
             return@post
         }
 
