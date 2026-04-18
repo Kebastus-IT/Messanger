@@ -6,8 +6,8 @@ import io.ktor.server.config.ApplicationConfig
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
 
-object Db {
-    fun init(config: ApplicationConfig) {
+
+    fun initDatabase(config: ApplicationConfig): Database {
         val hikariconfig = HikariConfig().apply {
             jdbcUrl = config.property("database.url").getString()
             username = config.property("database.user").getString()
@@ -26,6 +26,6 @@ object Db {
             .load()
             .migrate()
 
-        Database.connect(dataSource)
+        return Database.connect(dataSource)
+
     }
-}

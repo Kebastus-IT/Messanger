@@ -98,7 +98,7 @@ private suspend fun getDmTitles(
     }
 }
 
-object ChatRepository {
+class ChatRepository {
     suspend fun isMember(chatId: String, userId: String): Boolean {
         return newSuspendedTransaction(Dispatchers.IO) {
             ChatMembersTable

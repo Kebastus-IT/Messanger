@@ -2,7 +2,7 @@ package org.messanger.project.auth
 
 import de.mkammerer.argon2.Argon2Factory
 
-object PasswordHasher {
+class PasswordHasher {
 
     private val argon2 = Argon2Factory.create(
         Argon2Factory.Argon2Types.ARGON2id

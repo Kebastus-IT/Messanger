@@ -12,7 +12,9 @@ import org.messanger.project.models.LoginRequest
 import org.messanger.project.models.RegisterRequest
 import java.util.UUID
 
-fun Route.authRoutes(jwtService: JwtService) {
+fun Route.authRoutes(authRepo: AuthRepository,
+                     jwtService: JwtService,
+                     passwordHasher: PasswordHasher) {
 
     post("/register") {
         val request = call.receive<RegisterRequest>()
@@ -47,7 +49,7 @@ fun Route.authRoutes(jwtService: JwtService) {
             ))
             return@post
         }
-        if (AuthRepository.existsByLogin(login)) {
+        if (authRepo.existsByLogin(login)) {
             call.respond(
                 HttpStatusCode.Conflict,
                 ErrorResponse(
@@ -57,9 +59,9 @@ fun Route.authRoutes(jwtService: JwtService) {
             return@post
         }
 
-        val passwordHash = PasswordHasher.hash(password)
+        val passwordHash = passwordHasher.hash(password)
 
-        val user = AuthRepository.createUser(
+        val user = authRepo.createUser(
             id = UUID.randomUUID().toString(),
             login = login,
             displayName = displayName,
@@ -81,6 +83,7 @@ fun Route.authRoutes(jwtService: JwtService) {
 
     post("/login") {
         val request = call.receive<LoginRequest>()
+        val login = request.login.trim()
         if (request.login.isBlank() || request.password.isBlank()){
             call.respond(HttpStatusCode.BadRequest,
                 ErrorResponse(
@@ -89,7 +92,7 @@ fun Route.authRoutes(jwtService: JwtService) {
                 ))
             return@post
         }
-        val user = AuthRepository.findByLogin(request.login)
+        val user = authRepo.findByLogin(login)
         if (user == null) {
             call.respond(
                 HttpStatusCode.Unauthorized,
@@ -100,7 +103,7 @@ fun Route.authRoutes(jwtService: JwtService) {
             return@post
         }
 
-        val passwordOk = PasswordHasher.verify(
+        val passwordOk = passwordHasher.verify(
             password = request.password,
             passwordHash = user.passwordHash
         )

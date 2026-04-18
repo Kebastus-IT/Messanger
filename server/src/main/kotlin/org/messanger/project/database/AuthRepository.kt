@@ -33,7 +33,7 @@ private fun ResultRow.toAuthUser(): AuthUser {
     )
 }
 
-object AuthRepository {
+class AuthRepository {
 
     suspend fun findByLogin(login: String): AuthUser? {
         return newSuspendedTransaction(Dispatchers.IO) {

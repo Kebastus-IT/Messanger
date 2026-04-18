@@ -1,5 +1,6 @@
 package org.messanger.project.ws
 
+import io.ktor.server.application.log
 import io.ktor.server.websocket.*
 import io.ktor.websocket.Frame
 import org.messanger.project.database.ChatRepository
@@ -9,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 private val online = ConcurrentHashMap<String, DefaultWebSocketServerSession>()
 
 
-suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
+suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String, chatRepo: ChatRepository) {
     online[userId] = this
     val countOnline = online.size
     sendEvent(Connected(userId))
@@ -19,19 +20,22 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
            val textFrame = frame as? Frame.Text ?: continue
             val event = runCatching { decodeClientEvent(textFrame) }
                 .getOrElse {
-                    sendEvent(ErrorEvent("BAD_JSON", it.localizedMessage ?: "Bad message"))
+                    call.application.log.error("Failed to decode client WS event",it)
+                    sendEvent(ErrorEvent(
+                        code ="BAD_JSON",
+                        message = "Bad message"))
                     continue
                 }
             when(event) {
              is Join -> {
-                     val allowed = ChatRepository.isMember(event.chatId,userId)
+                     val allowed = chatRepo.isMember(event.chatId,userId)
                  if (!allowed) {
                      sendEvent(ErrorEvent("NOT_A_MEMBER", "You are not a member of ${event.chatId}"))
                      continue
                  }
                  sendEvent(JoinedChat(event.chatId))
 
-                 val recentMessages = ChatRepository
+                 val recentMessages = chatRepo
                      .getRecentMessages(event.chatId, limit = 50)
                      .map {
                          ChatMessage(
@@ -60,7 +64,7 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
                         sendEvent(ErrorEvent("MESSAGE_TOO_LONG", "Message must be 4000 characters or less"))
                         continue
                     }
-                    val allowed = ChatRepository.isMember(event.chatId,userId)
+                    val allowed = chatRepo.isMember(event.chatId,userId)
                     if (!allowed) {
                         sendEvent(ErrorEvent("NOT_A_MEMBER", "You are not a member of ${event.chatId}"))
                         continue
@@ -68,9 +72,9 @@ suspend fun DefaultWebSocketServerSession.handleChatWs(userId: String) {
 
 
 
-                    val messageId = ChatRepository.saveMessage(event.chatId, userId, text)
-                    val memberIds = ChatRepository.getChatMemberIds(event.chatId)
-                    val senderDisplayName = ChatRepository.getUserDisplayName(userId) ?: userId
+                    val messageId = chatRepo.saveMessage(event.chatId, userId, text)
+                    val memberIds = chatRepo.getChatMemberIds(event.chatId)
+                    val senderDisplayName = chatRepo.getUserDisplayName(userId) ?: userId
 
                     for (memberId in memberIds) {
                         online[memberId]?.sendEvent(

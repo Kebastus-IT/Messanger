@@ -69,6 +69,7 @@ ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt-jvm", version.re
 java-jwt = { module = "com.auth0:java-jwt", version = "4.5.0" }
 argon2 = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2" }
 multiplatform-settings = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettings" }
+status-pages = {module = "io.ktor:ktor-server-status-pages", version.ref = "ktor"}
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -39,4 +39,5 @@ dependencies {
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.java.jwt)
     implementation(libs.argon2)
+    implementation(libs.status.pages)
 }
