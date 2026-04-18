@@ -1,11 +1,12 @@
 package org.messanger.project.database
 
 
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 object UsersTable : Table("users") {
     val id = varchar("id", 64)
@@ -34,8 +35,8 @@ private fun ResultRow.toAuthUser(): AuthUser {
 
 object AuthRepository {
 
-    fun findByLogin(login: String): AuthUser? {
-        return transaction {
+    suspend fun findByLogin(login: String): AuthUser? {
+        return newSuspendedTransaction(Dispatchers.IO) {
             UsersTable
                 .selectAll()
                 .where { UsersTable.login eq login }
@@ -44,17 +45,17 @@ object AuthRepository {
         }
     }
 
-    fun existsByLogin(login: String): Boolean {
+    suspend fun existsByLogin(login: String): Boolean {
         return findByLogin(login) != null
     }
 
-    fun createUser(
+    suspend fun createUser(
         id: String,
         login: String,
         displayName: String,
         passwordHash: String
     ): AuthUser {
-        return transaction {
+        return newSuspendedTransaction(Dispatchers.IO) {
             UsersTable.insert {
                 it[UsersTable.id] = id
                 it[UsersTable.login] = login

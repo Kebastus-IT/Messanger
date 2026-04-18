@@ -1,5 +1,6 @@
 package org.messanger.project.database
 
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
@@ -9,6 +10,7 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.messanger.project.models.ChatSummary
 import org.messanger.project.models.UserSummary
 import java.time.LocalDateTime
@@ -51,8 +53,8 @@ private data class RawChat(
     val displayTitle: String,
     val type: String
 )
-private fun getRawUserChats(userId: String): List<RawChat> {
-    return transaction {
+private suspend fun getRawUserChats(userId: String): List<RawChat> {
+    return newSuspendedTransaction(Dispatchers.IO) {
         ChatMembersTable.join(
             otherTable = ChatsTable,
             joinType = org.jetbrains.exposed.sql.JoinType.INNER,
@@ -70,13 +72,13 @@ private fun getRawUserChats(userId: String): List<RawChat> {
             }
     }
 }
-private fun getDmTitles(
+private suspend fun getDmTitles(
     currentUserId: String,
     dmChatIds: List<String>
 ): Map<String, String> {
     if (dmChatIds.isEmpty()) return emptyMap()
 
-    return transaction {
+    return newSuspendedTransaction(Dispatchers.IO) {
         ChatMembersTable.join(
             otherTable = UsersTable,
             joinType = org.jetbrains.exposed.sql.JoinType.INNER,
@@ -97,8 +99,8 @@ private fun getDmTitles(
 }
 
 object ChatRepository {
-    fun isMember(chatId: String, userId: String): Boolean {
-        return transaction {
+    suspend fun isMember(chatId: String, userId: String): Boolean {
+        return newSuspendedTransaction(Dispatchers.IO) {
             ChatMembersTable
                 .selectAll()
                 .where {
@@ -109,8 +111,8 @@ object ChatRepository {
         }
     }
 
-    fun saveMessage(chatId: String, userId: String, text: String): Long {
-        return transaction {
+    suspend fun saveMessage(chatId: String, userId: String, text: String): Long {
+        return newSuspendedTransaction(Dispatchers.IO) {
             val inserted = MessagesTable.insert {
                 it[MessagesTable.chatId] = chatId
                 it[MessagesTable.senderUserId] = userId
@@ -121,8 +123,8 @@ object ChatRepository {
         }
     }
 
-    fun getChatMemberIds(chatId: String): List<String> {
-        return transaction {
+    suspend fun getChatMemberIds(chatId: String): List<String> {
+        return newSuspendedTransaction(Dispatchers.IO) {
             ChatMembersTable
                 .select(ChatMembersTable.userId)
                 .where { ChatMembersTable.chatId eq chatId }
@@ -130,7 +132,7 @@ object ChatRepository {
         }
     }
 
-    fun getUserChats(userId: String): List<ChatSummary> {
+    suspend fun getUserChats(userId: String): List<ChatSummary> {
         val rawChats = getRawUserChats(userId)
 
         val dmChatIds = rawChats
@@ -157,14 +159,14 @@ object ChatRepository {
         }
     }
 
-    fun findUser(
+    suspend fun findUser(
         query: String,
         ownId: String,
         limit: Int = 20
     ): List<UserSummary>{
         val trimmed = query.trim()
         if(trimmed.isBlank()) return emptyList()
-        return transaction {
+        return newSuspendedTransaction(Dispatchers.IO) {
             UsersTable
                 .select(UsersTable.id, UsersTable.login, UsersTable.displayName)
                 .where{
@@ -189,8 +191,8 @@ object ChatRepository {
         return "dm:${sorted[0]}:${sorted[1]}"
     }
 
-    fun chatExists(chatId: String): Boolean{
-        return transaction {
+    suspend fun chatExists(chatId: String): Boolean{
+        return newSuspendedTransaction(Dispatchers.IO) {
             ChatsTable
                 .select(ChatsTable.id)
                 .where { ChatsTable.id eq chatId }
@@ -198,8 +200,8 @@ object ChatRepository {
                 .any()
         }
     }
-    fun createDMChat(chatId: String, userA: String, userB: String){
-        return transaction {
+    suspend fun createDMChat(chatId: String, userA: String, userB: String){
+        return newSuspendedTransaction(Dispatchers.IO) {
             ChatsTable.insert {
                 it[ChatsTable.id] = chatId
                 it[ChatsTable.title] = "DM"
@@ -215,8 +217,8 @@ object ChatRepository {
             }
         }
     }
-    fun getUserChatById(userId: String, chatId: String): ChatSummary? {
-        return transaction {
+    suspend fun getUserChatById(userId: String, chatId: String): ChatSummary? {
+        return newSuspendedTransaction(Dispatchers.IO) {
             ChatsTable.join(
                 otherTable = ChatMembersTable,
                 joinType = org.jetbrains.exposed.sql.JoinType.INNER,
@@ -233,8 +235,8 @@ object ChatRepository {
                 .singleOrNull()
         }
     }
-    fun getUserDisplayName(userId: String): String? {
-        return transaction {
+    suspend fun getUserDisplayName(userId: String): String? {
+        return newSuspendedTransaction(Dispatchers.IO) {
             UsersTable
                 .select(UsersTable.displayName)
                 .where { UsersTable.id eq userId }
@@ -242,8 +244,8 @@ object ChatRepository {
                 .singleOrNull()
         }
     }
-    fun getRecentMessages(chatId: String, limit: Int): List<StoredMessage> {
-        return transaction {
+    suspend fun getRecentMessages(chatId: String, limit: Int): List<StoredMessage> {
+        return newSuspendedTransaction(Dispatchers.IO) {
             MessagesTable.join(
                 otherTable = UsersTable,
                 joinType = org.jetbrains.exposed.sql.JoinType.INNER,
