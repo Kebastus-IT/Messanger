@@ -8,7 +8,7 @@ import java.util.Date
 class JwtService(
     private val secret: String,
     private val issuer: String,
-    private val audience: String
+    private val audience: String,
 ) {
     private val algorithm = Algorithm.HMAC256(secret)
 
