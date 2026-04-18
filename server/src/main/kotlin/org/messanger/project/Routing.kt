@@ -1,36 +1,28 @@
 package org.messanger.project
 
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
-import io.ktor.websocket.CloseReason
-import io.ktor.websocket.close
-import org.messanger.project.auth.JwtService
+import io.ktor.websocket.*
 import org.messanger.project.auth.authRoutes
-import org.messanger.project.database.ChatRepository
 import org.messanger.project.models.CreateDmRequest
-import kotlin.time.Duration.Companion.seconds
-import io.ktor.server.plugins.statuspages.StatusPages
-import io.ktor.server.response.respondText
+import org.messanger.project.services.AuthService
 import org.messanger.project.services.ChatService
-import org.messanger.project.auth.PasswordHasher
-import org.messanger.project.database.AuthRepository
 import org.messanger.project.ws.ChatWsHandler
+import kotlin.time.Duration.Companion.seconds
 
-fun Application.routingModule(authRepo: AuthRepository,
+fun Application.routingModule(authService: AuthService,
                               chatService: ChatService,
-                              wsHandler: ChatWsHandler,
-                              jwtService: JwtService,
-                              passwordHasher: PasswordHasher) {
+                              wsHandler: ChatWsHandler) {
     install(ContentNegotiation) {
         json()
     }
@@ -55,9 +47,7 @@ fun Application.routingModule(authRepo: AuthRepository,
             ?.asString()
     }
     routing {
-        authRoutes(authRepo,
-            jwtService,
-            passwordHasher)
+        authRoutes(authService)
 
 
         authenticate("auth-jwt") {
