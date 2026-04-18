@@ -48,57 +48,40 @@ data class StoredMessage(
     val text: String,
     val createdAt: LocalDateTime
 )
-private data class RawChat(
+data class RawChat(
     val id: String,
     val displayTitle: String,
     val type: String
 )
-private suspend fun getRawUserChats(userId: String): List<RawChat> {
-    return newSuspendedTransaction(Dispatchers.IO) {
-        ChatMembersTable.join(
-            otherTable = ChatsTable,
-            joinType = org.jetbrains.exposed.sql.JoinType.INNER,
-            onColumn = ChatMembersTable.chatId,
-            otherColumn = ChatsTable.id
-        )
-            .select(ChatsTable.id, ChatsTable.title, ChatsTable.type)
-            .where { ChatMembersTable.userId eq userId }
-            .map {
-                RawChat(
-                    id = it[ChatsTable.id],
-                    displayTitle = it[ChatsTable.title],
-                    type = it[ChatsTable.type]
-                )
-            }
-    }
-}
-private suspend fun getDmTitles(
-    currentUserId: String,
-    dmChatIds: List<String>
-): Map<String, String> {
-    if (dmChatIds.isEmpty()) return emptyMap()
 
-    return newSuspendedTransaction(Dispatchers.IO) {
-        ChatMembersTable.join(
-            otherTable = UsersTable,
-            joinType = org.jetbrains.exposed.sql.JoinType.INNER,
-            onColumn = ChatMembersTable.userId,
-            otherColumn = UsersTable.id
-        )
-            .select(ChatMembersTable.chatId, UsersTable.displayName)
-            .where {
-                (ChatMembersTable.chatId inList dmChatIds) and
-                        (ChatMembersTable.userId neq currentUserId)
-            }
-            .associate {
-                val chatId = it[ChatMembersTable.chatId]
-                val displayName = it[UsersTable.displayName]
-                chatId to displayName
-            }
-    }
-}
+
 
 class ChatRepository {
+    suspend fun getDmTitles(
+        currentUserId: String,
+        dmChatIds: List<String>
+    ): Map<String, String> {
+        if (dmChatIds.isEmpty()) return emptyMap()
+
+        return newSuspendedTransaction(Dispatchers.IO) {
+            ChatMembersTable.join(
+                otherTable = UsersTable,
+                joinType = org.jetbrains.exposed.sql.JoinType.INNER,
+                onColumn = ChatMembersTable.userId,
+                otherColumn = UsersTable.id
+            )
+                .select(ChatMembersTable.chatId, UsersTable.displayName)
+                .where {
+                    (ChatMembersTable.chatId inList dmChatIds) and
+                            (ChatMembersTable.userId neq currentUserId)
+                }
+                .associate {
+                    val chatId = it[ChatMembersTable.chatId]
+                    val displayName = it[UsersTable.displayName]
+                    chatId to displayName
+                }
+        }
+    }
     suspend fun isMember(chatId: String, userId: String): Boolean {
         return newSuspendedTransaction(Dispatchers.IO) {
             ChatMembersTable
@@ -131,46 +114,36 @@ class ChatRepository {
                 .map { it[ChatMembersTable.userId] }
         }
     }
-
-    suspend fun getUserChats(userId: String): List<ChatSummary> {
-        val rawChats = getRawUserChats(userId)
-
-        val dmChatIds = rawChats
-            .filter { it.type == "DM" }
-            .map { it.id }
-
-        val dmTitles = getDmTitles(
-            currentUserId = userId,
-            dmChatIds = dmChatIds
-        )
-
-        return rawChats.map { rawChat ->
-            val displayTitle = if (rawChat.type == "DM") {
-                dmTitles[rawChat.id] ?: rawChat.displayTitle
-            } else {
-                rawChat.displayTitle
-            }
-
-            ChatSummary(
-                id = rawChat.id,
-                displayTitle = displayTitle,
-                type = rawChat.type
+    suspend fun getRawUserChats(userId: String): List<RawChat> {
+        return newSuspendedTransaction(Dispatchers.IO) {
+            ChatMembersTable.join(
+                otherTable = ChatsTable,
+                joinType = org.jetbrains.exposed.sql.JoinType.INNER,
+                onColumn = ChatMembersTable.chatId,
+                otherColumn = ChatsTable.id
             )
+                .select(ChatsTable.id, ChatsTable.title, ChatsTable.type)
+                .where { ChatMembersTable.userId eq userId }
+                .map {
+                    RawChat(
+                        id = it[ChatsTable.id],
+                        displayTitle = it[ChatsTable.title],
+                        type = it[ChatsTable.type]
+                    )
+                }
         }
     }
 
-    suspend fun findUser(
+    suspend fun searchByLogin(
         query: String,
         ownId: String,
         limit: Int = 20
     ): List<UserSummary>{
-        val trimmed = query.trim()
-        if(trimmed.isBlank()) return emptyList()
         return newSuspendedTransaction(Dispatchers.IO) {
             UsersTable
                 .select(UsersTable.id, UsersTable.login, UsersTable.displayName)
                 .where{
-                    (UsersTable.login like "%$trimmed%") and
+                    (UsersTable.login like "%$query%") and
                             (UsersTable.id neq ownId)
                 }
                 .limit(limit)
@@ -186,10 +159,7 @@ class ChatRepository {
         }
     }
 
-    fun buildChatIdForDM(userA : String, userB: String): String{
-        val sorted = listOf(userA,userB).sorted()
-        return "dm:${sorted[0]}:${sorted[1]}"
-    }
+
 
     suspend fun chatExists(chatId: String): Boolean{
         return newSuspendedTransaction(Dispatchers.IO) {

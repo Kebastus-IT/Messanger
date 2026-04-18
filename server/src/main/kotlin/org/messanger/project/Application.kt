@@ -2,11 +2,13 @@ package org.messanger.project
 
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
+import org.messanger.project.services.ChatService
 import org.messanger.project.auth.JwtService
 import org.messanger.project.auth.PasswordHasher
 import org.messanger.project.database.AuthRepository
 import org.messanger.project.database.ChatRepository
 import org.messanger.project.database.initDatabase
+import org.messanger.project.ws.ChatWsHandler
 
 fun main(args: Array<String>) {
     EngineMain.main(args)
@@ -22,10 +24,12 @@ fun Application.module(){
     val passwordHasher = PasswordHasher()
     val authRepo = AuthRepository()
     val chatRepo = ChatRepository()
+    val chatService = ChatService(chatRepo)
+    val wsHandler = ChatWsHandler(chatRepo)
     val jwt = JwtService(
         secret = jwtSecret,
         audience = jwtAudience,
-        issuer = jwtIssuer,
+        issuer = jwtIssuer
         )
-    routingModule(authRepo, chatRepo, jwt, passwordHasher)
+    routingModule(authRepo, chatService, wsHandler, jwt, passwordHasher)
 }

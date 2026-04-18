@@ -18,15 +18,17 @@ import org.messanger.project.auth.JwtService
 import org.messanger.project.auth.authRoutes
 import org.messanger.project.database.ChatRepository
 import org.messanger.project.models.CreateDmRequest
-import org.messanger.project.ws.handleChatWs
 import kotlin.time.Duration.Companion.seconds
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respondText
+import org.messanger.project.services.ChatService
 import org.messanger.project.auth.PasswordHasher
 import org.messanger.project.database.AuthRepository
+import org.messanger.project.ws.ChatWsHandler
 
 fun Application.routingModule(authRepo: AuthRepository,
-                              chatRepo: ChatRepository,
+                              chatService: ChatService,
+                              wsHandler: ChatWsHandler,
                               jwtService: JwtService,
                               passwordHasher: PasswordHasher) {
     install(ContentNegotiation) {
@@ -53,7 +55,7 @@ fun Application.routingModule(authRepo: AuthRepository,
             ?.asString()
     }
     routing {
-        authRoutes(AuthRepository(),
+        authRoutes(authRepo,
             jwtService,
             passwordHasher)
 
@@ -69,15 +71,12 @@ fun Application.routingModule(authRepo: AuthRepository,
                     )
                     return@get
                 }
-                val query = call.request.queryParameters["login"].orEmpty().trim()
+                val query = call.request.queryParameters["login"].orEmpty()
                 if (query.length !in 1..32){
                     call.respond(HttpStatusCode.BadRequest, "Query must be 1-32 chars")
                     return@get
                 }
-                val users = chatRepo.findUser(
-                    query = query,
-                    ownId = currentUserId
-                )
+                val users = chatService.searchUsers(query, currentUserId)
                 call.respond(users)
             }
             post("/chats/dm"){
@@ -97,16 +96,8 @@ fun Application.routingModule(authRepo: AuthRepository,
                     )
                     return@post
                 }
-                val chatId = chatRepo.buildChatIdForDM(currentUserId,otherUserId)
 
-                if (!chatRepo.chatExists(chatId)){
-                    chatRepo.createDMChat(
-                        chatId = chatId,
-                        userA = currentUserId,
-                        userB = otherUserId
-                    )
-                }
-                val chat = chatRepo.getUserChatById(currentUserId, chatId)
+                val chat = chatService.getOrCreateDm(currentUserId, otherUserId)
                 if (chat == null){
                     call.respond(HttpStatusCode.InternalServerError,
                         "Failed to load DM chat"
@@ -127,7 +118,7 @@ fun Application.routingModule(authRepo: AuthRepository,
                     return@get
                 }
 
-                val chats = chatRepo.getUserChats(userId)
+                val chats = chatService.getUserChats(userId)
                 call.respond(chats)
             }
             webSocket("/ws"){
@@ -142,7 +133,7 @@ fun Application.routingModule(authRepo: AuthRepository,
                     )
                     return@webSocket
                 }
-                handleChatWs(userId,chatRepo)
+                wsHandler.handle(userId, this)
             }
         }
 
