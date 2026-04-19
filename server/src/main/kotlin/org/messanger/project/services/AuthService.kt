@@ -32,27 +32,26 @@ class AuthService(private val authRepo: AuthRepository, private val passwordHash
         if (password.length !in 8..128){
             return RegisterResult.InvalidPassword
         }
-        if (authRepo.existsByLogin(login)) {
-            return RegisterResult.LoginTaken
-        }
         val passwordHash = passwordHasher.hash(password)
 
-        val user = authRepo.createUser(
+        val user = authRepo.createUserIfLoginFree(
             id = UUID.randomUUID().toString(),
             login = login,
             displayName = displayName,
             passwordHash = passwordHash
-        )
+        ) ?: return RegisterResult.LoginTaken
 
         val token = jwtService.createToken(user)
 
         return RegisterResult.Success(token,user.id, user.login, user.displayName)
     }
     suspend fun login(req: LoginRequest): LoginResult{
-        val login = req.login.trim()
+
         if (req.login.isBlank() || req.password.isBlank()){
             return LoginResult.InvalidCredentials
         }
+        val login = req.login.trim()
+
         val user = authRepo.findByLogin(login) ?: return LoginResult.InvalidCredentials
 
         val passwordOk = passwordHasher.verify(

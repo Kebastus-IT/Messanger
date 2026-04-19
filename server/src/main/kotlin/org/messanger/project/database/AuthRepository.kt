@@ -2,6 +2,7 @@ package org.messanger.project.database
 
 
 import kotlinx.coroutines.Dispatchers
+import org.jetbrains.exposed.exceptions.ExposedSQLException
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
@@ -45,30 +46,29 @@ class AuthRepository {
         }
     }
 
-    suspend fun existsByLogin(login: String): Boolean {
-        return findByLogin(login) != null
-    }
-
-    suspend fun createUser(
+    suspend fun createUserIfLoginFree(
         id: String,
         login: String,
         displayName: String,
         passwordHash: String
-    ): AuthUser {
-        return newSuspendedTransaction(Dispatchers.IO) {
-            UsersTable.insert {
-                it[UsersTable.id] = id
-                it[UsersTable.login] = login
-                it[UsersTable.displayName] = displayName
-                it[UsersTable.passwordHash] = passwordHash
+    ): AuthUser? {
+        return try {
+            newSuspendedTransaction(Dispatchers.IO) {
+                UsersTable.insert {
+                    it[UsersTable.id] = id
+                    it[UsersTable.login] = login
+                    it[UsersTable.displayName] = displayName
+                    it[UsersTable.passwordHash] = passwordHash
+                }
+                AuthUser(
+                    id = id,
+                    login = login,
+                    displayName = displayName,
+                    passwordHash = passwordHash
+                )
             }
-
-            AuthUser(
-                id = id,
-                login = login,
-                displayName = displayName,
-                passwordHash = passwordHash
-            )
+        } catch (e: ExposedSQLException){
+            if (e.sqlState == "23505") null else throw e
         }
     }
 }
