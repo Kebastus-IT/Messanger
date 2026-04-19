@@ -1,4 +1,4 @@
-package org.messanger.project.auth
+package org.messanger.project.services
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm

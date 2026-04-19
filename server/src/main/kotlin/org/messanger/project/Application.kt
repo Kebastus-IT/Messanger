@@ -3,7 +3,7 @@ package org.messanger.project
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import org.messanger.project.services.ChatService
-import org.messanger.project.auth.JwtService
+import org.messanger.project.services.JwtService
 import org.messanger.project.auth.PasswordHasher
 import org.messanger.project.database.AuthRepository
 import org.messanger.project.database.ChatRepository

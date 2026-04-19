@@ -1,6 +1,5 @@
 package org.messanger.project.services
 
-import org.messanger.project.auth.JwtService
 import org.messanger.project.auth.PasswordHasher
 import org.messanger.project.database.AuthRepository
 import org.messanger.project.models.LoginRequest
