@@ -1,14 +1,7 @@
 package org.messanger.project.database
 
 import kotlinx.coroutines.Dispatchers
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SortOrder
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertIgnore
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
 import org.jetbrains.exposed.sql.javatime.datetime
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -26,7 +19,7 @@ object ChatMembersTable : Table("chat_members") {
 object MessagesTable : Table("messages") {
     val msgId = long("id").autoIncrement()
     val chatId = varchar("chat_id", 164)
-    val senderUserId = varchar("sender_user_id", 64)
+    val senderUserId = varchar("sender_user_id", 64).nullable()
     val text = text("text")
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
 
@@ -44,8 +37,8 @@ object ChatsTable : Table("chats") {
 data class StoredMessage(
     val id: Long,
     val chatId: String,
-    val senderUserId: String,
-    val senderDisplayName: String,
+    val senderUserId: String?,
+    val senderDisplayName: String?,
     val text: String,
     val createdAt: LocalDateTime
 )
@@ -143,17 +136,28 @@ class ChatRepository {
                 }
         }
     }
-
+    private fun escapeLikePattern(input: String): String =
+        buildString {
+            for (ch in input) {
+                when (ch) {
+                    '\\','%','_' -> append('\\').append(ch)
+                    else -> append(ch)
+                }
+            }
+        }
     suspend fun searchByLogin(
         query: String,
         ownId: String,
         limit: Int = 20
     ): List<UserSummary>{
+        if (query.isBlank()) return emptyList()
+        val safe = escapeLikePattern(query.trim().lowercase())
+        val pattern = "%$safe%"
         return newSuspendedTransaction(Dispatchers.IO) {
             UsersTable
                 .select(UsersTable.id, UsersTable.login, UsersTable.displayName)
                 .where{
-                    (UsersTable.login like "%$query%") and
+                    (UsersTable.login.lowerCase() like pattern) and
                             (UsersTable.id neq ownId)
                 }
                 .limit(limit)
@@ -218,7 +222,7 @@ class ChatRepository {
         return newSuspendedTransaction(Dispatchers.IO) {
             MessagesTable.join(
                 otherTable = UsersTable,
-                joinType = org.jetbrains.exposed.sql.JoinType.INNER,
+                joinType = org.jetbrains.exposed.sql.JoinType.LEFT,
                 onColumn = MessagesTable.senderUserId,
                 otherColumn = UsersTable.id
             )

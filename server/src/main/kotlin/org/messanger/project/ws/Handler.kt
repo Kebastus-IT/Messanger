@@ -69,8 +69,8 @@ class ChatWsHandler(private val chatRepo: ChatRepository) {
             .map {
                 ChatMessage(
                     chatId = it.chatId,
-                    senderUserId = it.senderUserId,
-                    senderDisplayName = it.senderDisplayName,
+                    senderUserId = it.senderUserId ?: "",
+                    senderDisplayName = it.senderDisplayName ?: "Deleted user",
                     text = it.text,
                     serverMsgId = it.id
                 )
