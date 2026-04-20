@@ -6,6 +6,7 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.insertIgnore
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.javatime.CurrentDateTime
@@ -34,7 +35,7 @@ object MessagesTable : Table("messages") {
 
 object ChatsTable : Table("chats") {
     val id = varchar("id", 164)
-    val title = varchar("title", 255)
+    val title = varchar("title", 128)
     val type = varchar("type", 32)
 
     override val primaryKey = PrimaryKey(id)
@@ -81,6 +82,15 @@ class ChatRepository {
                     chatId to displayName
                 }
         }
+    }
+    suspend fun userExists(userId: String): Boolean {
+            return newSuspendedTransaction(Dispatchers.IO) {
+                UsersTable
+                    .select(UsersTable.id)
+                    .where{ UsersTable.id eq userId }
+                    .limit(1)
+                    .any()
+            }
     }
     suspend fun isMember(chatId: String, userId: String): Boolean {
         return newSuspendedTransaction(Dispatchers.IO) {
@@ -159,36 +169,21 @@ class ChatRepository {
         }
     }
 
-
-
-    suspend fun chatExists(chatId: String): Boolean{
+    suspend fun ensureDmAndGet(chatId: String, currentUserId: String, otherUserId: String): ChatSummary?{
         return newSuspendedTransaction(Dispatchers.IO) {
-            ChatsTable
-                .select(ChatsTable.id)
-                .where { ChatsTable.id eq chatId }
-                .limit(1)
-                .any()
-        }
-    }
-    suspend fun createDMChat(chatId: String, userA: String, userB: String){
-        return newSuspendedTransaction(Dispatchers.IO) {
-            ChatsTable.insert {
+            ChatsTable.insertIgnore {
                 it[ChatsTable.id] = chatId
                 it[ChatsTable.title] = "DM"
                 it[ChatsTable.type] ="DM"
             }
-            ChatMembersTable.insert {
+            ChatMembersTable.insertIgnore {
                 it[ChatMembersTable.chatId] = chatId
-                it[ChatMembersTable.userId] = userA
+                it[ChatMembersTable.userId] = currentUserId
             }
-            ChatMembersTable.insert {
+            ChatMembersTable.insertIgnore {
                 it[ChatMembersTable.chatId] = chatId
-                it[ChatMembersTable.userId] = userB
+                it[ChatMembersTable.userId] = otherUserId
             }
-        }
-    }
-    suspend fun getUserChatById(userId: String, chatId: String): ChatSummary? {
-        return newSuspendedTransaction(Dispatchers.IO) {
             ChatsTable.join(
                 otherTable = ChatMembersTable,
                 joinType = org.jetbrains.exposed.sql.JoinType.INNER,
@@ -196,12 +191,17 @@ class ChatRepository {
                 otherColumn = ChatMembersTable.chatId
             )
                 .select(ChatsTable.id, ChatsTable.title, ChatsTable.type)
-                .where{ (ChatMembersTable.userId eq userId) and (ChatsTable.id eq chatId)}
-                .map { ChatSummary(
-                    id = it[ChatsTable.id],
-                    displayTitle =  it[ChatsTable.title],
-                    type = it[ChatsTable.type]
-                ) }
+                .where {
+                    (ChatsTable.id eq chatId) and
+                            (ChatMembersTable.userId eq currentUserId)
+                }
+                .map {
+                    ChatSummary(
+                        id = it[ChatsTable.id],
+                        displayTitle = it[ChatsTable.title],
+                        type = it[ChatsTable.type]
+                    )
+                }
                 .singleOrNull()
         }
     }

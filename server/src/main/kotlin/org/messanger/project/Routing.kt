@@ -15,8 +15,10 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import org.messanger.project.auth.authRoutes
 import org.messanger.project.models.CreateDmRequest
+import org.messanger.project.models.ErrorResponse
 import org.messanger.project.services.AuthService
 import org.messanger.project.services.ChatService
+import org.messanger.project.services.CreateDmResult
 import org.messanger.project.ws.ChatWsHandler
 import kotlin.time.Duration.Companion.seconds
 
@@ -80,22 +82,11 @@ fun Application.routingModule(authService: AuthService,
                 }
                 val request = call.receive<CreateDmRequest>()
                 val otherUserId = request.otherUserId
-                if(otherUserId == currentUserId){
-                    call.respond(HttpStatusCode.BadRequest,
-                        "Cannot create DM with yourself"
-                    )
-                    return@post
+                when (val result = chatService.getOrCreateDm(currentUserId, otherUserId)) {
+                    is CreateDmResult.Success -> call.respond(result.chat)
+                    CreateDmResult.CannotDmSelf -> call.respond(HttpStatusCode.BadRequest, ErrorResponse(code = "CANNOT_CREATE_DM", message = "Cannot create DM with yourself"))
+                    CreateDmResult.OtherUserNotFound -> call.respond(HttpStatusCode.NotFound, ErrorResponse(code = "OTHER_USER_NOT_FOUND", message = "User does not exist"))
                 }
-
-                val chat = chatService.getOrCreateDm(currentUserId, otherUserId)
-                if (chat == null){
-                    call.respond(HttpStatusCode.InternalServerError,
-                        "Failed to load DM chat"
-                    )
-                    return@post
-                }
-                call.respond(chat)
-
             }
             get("/chats") {
                 val userId = call.extractUserId()
